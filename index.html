@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conversor de Fatura PDF para Excel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f7fb;--panel:#fff;--text:#142033;--muted:#6f7b8f;--primary:#ff6b00;
+      --primary-dark:#d95700;--navy:#102a43;--line:#dde5ef;--ok:#16794b;--warn:#b45309;--danger:#b42318;
+      --shadow:0 18px 45px rgba(20,32,51,.10)
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#eef3f9,#f9fbfd);color:var(--text)}
+    .app{max-width:1440px;margin:auto;padding:28px}.hero{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:22px}
+    .hero h1{margin:0;font-size:clamp(28px,4vw,46px);letter-spacing:-1.4px}.hero p{margin:9px 0 0;color:var(--muted);max-width:760px;line-height:1.55}
+    .badge{padding:10px 14px;border-radius:999px;background:#fff1e8;color:var(--primary-dark);font-weight:800;white-space:nowrap;border:1px solid #ffd4b5}
+    .grid{display:grid;grid-template-columns:380px 1fr;gap:22px}.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+    .sidebar{padding:22px;height:max-content;position:sticky;top:18px}.section-title{font-size:14px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800;margin-bottom:12px}
+    .dropzone{border:2px dashed #cbd6e4;border-radius:18px;padding:28px 18px;text-align:center;cursor:pointer;transition:.2s;background:#fbfdff}
+    .dropzone:hover,.dropzone.drag{border-color:var(--primary);background:#fff8f2;transform:translateY(-1px)}
+    .dropzone .icon{font-size:44px}.dropzone strong{display:block;margin-top:8px;font-size:17px}.dropzone span{display:block;color:var(--muted);font-size:13px;margin-top:6px}
+    input[type=file]{display:none}.file-info{margin:14px 0;padding:12px;border-radius:12px;background:#f3f6fa;font-size:13px;word-break:break-word;display:none}
+    .controls{display:grid;gap:10px;margin-top:14px}.btn{border:0;border-radius:12px;padding:13px 16px;font-weight:800;cursor:pointer;transition:.18s;font-size:14px}
+    .btn:disabled{opacity:.45;cursor:not-allowed}.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover:not(:disabled){background:var(--primary-dark);transform:translateY(-1px)}
+    .btn-dark{background:var(--navy);color:#fff}.btn-light{background:#edf2f7;color:var(--navy)}.btn-danger{background:#fff0ee;color:var(--danger);border:1px solid #ffd1cc}
+    .progress-wrap{display:none;margin-top:16px}.progress{height:10px;background:#e7edf4;border-radius:999px;overflow:hidden}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--primary),#ff9a4d);transition:.25s}
+    .status{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.4}.tips{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12.5px;line-height:1.55}
+    .main{padding:20px;min-width:0}.toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .toolbar-left,.toolbar-right{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.counter{font-weight:800}.counter span{color:var(--primary)}
+    .search{border:1px solid var(--line);border-radius:11px;padding:11px 13px;min-width:240px;outline:none}.search:focus{border-color:var(--primary)}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;max-height:690px}table{border-collapse:separate;border-spacing:0;width:100%;min-width:1050px}
+    th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;text-align:left;padding:13px 10px;font-size:12px;letter-spacing:.03em}td{padding:8px 8px;border-bottom:1px solid #edf1f5;background:#fff;vertical-align:middle}
+    tr:hover td{background:#fffaf6}.cell{width:100%;border:1px solid transparent;border-radius:7px;padding:8px;background:transparent;font:inherit;min-width:75px}.cell:hover,.cell:focus{border-color:#cfd9e5;background:#fff;outline:none}
+    .money{text-align:right;min-width:110px}.small{width:70px}.delete-row{border:0;background:#fff0ee;color:var(--danger);width:34px;height:34px;border-radius:9px;cursor:pointer;font-weight:900}
+    .empty{padding:70px 20px;text-align:center;color:var(--muted)}.empty .big{font-size:58px;filter:grayscale(.3);opacity:.75}.empty h3{color:var(--text);margin:12px 0 6px}
+    .summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;margin-bottom:14px}.metric{padding:16px;border:1px solid var(--line);border-radius:15px;background:#fbfdff}.metric small{color:var(--muted);font-weight:700}.metric strong{display:block;font-size:24px;margin-top:6px}
+    details{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfdff}summary{cursor:pointer;font-weight:800}.raw{width:100%;min-height:190px;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}.sidebar{position:static}.hero{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.app{padding:16px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div><h1>PDF de cartão → Excel</h1><p>Envie a fatura, o sistema lê as páginas com OCR, identifica as transações e monta uma tabela editável antes de gerar o arquivo Excel.</p></div>
+    <div class="badge">Leitura local no navegador</div>
+  </header>
+
+  <div class="grid">
+    <aside class="card sidebar">
+      <div class="section-title">1. Selecione a fatura</div>
+      <label class="dropzone" id="dropzone" for="pdfFile">
+        <div class="icon">📄</div><strong>Clique ou arraste o PDF</strong><span>Compatível com PDF digitalizado e PDF com texto</span>
+      </label>
+      <input id="pdfFile" type="file" accept="application/pdf,.pdf" />
+      <div class="file-info" id="fileInfo"></div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="processBtn" disabled>🔎 Ler e converter</button>
+        <button class="btn btn-dark" id="exportBtn" disabled>⬇️ Baixar Excel</button>
+        <button class="btn btn-light" id="addBtn">＋ Adicionar linha manual</button>
+        <button class="btn btn-danger" id="clearBtn">Limpar tudo</button>
+      </div>
+      <div class="progress-wrap" id="progressWrap"><div class="progress"><div class="progress-bar" id="progressBar"></div></div><div class="status" id="status">Aguardando...</div></div>
+      <div class="tips"><b>Dica:</b> faturas bancárias mudam de layout. Revise a prévia antes de exportar. O sistema foi preparado para reconhecer linhas como <i>data + estabelecimento + parcela + valor</i>, inclusive no padrão Itaú.</div>
+    </aside>
+
+    <main class="card main">
+      <div class="summary">
+        <div class="metric"><small>Transações encontradas</small><strong id="metricCount">0</strong></div>
+        <div class="metric"><small>Valor total</small><strong id="metricTotal">R$ 0,00</strong></div>
+        <div class="metric"><small>Páginas processadas</small><strong id="metricPages">0</strong></div>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left"><div class="counter">Prévia: <span id="rowCount">0</span> linhas</div></div>
+        <div class="toolbar-right"><input class="search" id="search" placeholder="Filtrar estabelecimento..." /></div>
+      </div>
+      <div id="empty" class="empty"><div class="big">🧾</div><h3>Nenhuma fatura processada</h3><div>Selecione o PDF ao lado e clique em “Ler e converter”.</div></div>
+      <div class="table-wrap" id="tableWrap" style="display:none">
+        <table><thead><tr><th>Data</th><th>Estabelecimento / descrição</th><th>Parcela</th><th>Valor</th><th>Portador</th><th>Final cartão</th><th>Página</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+      </div>
+      <details><summary>Texto reconhecido pelo OCR</summary><textarea class="raw" id="rawText" placeholder="O texto extraído aparecerá aqui..."></textarea><button class="btn btn-light" id="reparseBtn" style="margin-top:8px">Reprocessar texto editado</button></details>
+    </main>
+  </div>
+</div>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const $=s=>document.querySelector(s); let selectedFile=null; let rows=[]; let pagesProcessed=0;
+  const moneyBR=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const parseMoney=s=>{ if(typeof s==='number')return s; s=String(s||'').replace(/R\$\s?/gi,'').replace(/\s/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.-]/g,''); return Number(s)||0 };
+  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+
+  $('#pdfFile').addEventListener('change',e=>setFile(e.target.files[0]));
+  const dz=$('#dropzone'); ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag')}));
+  dz.addEventListener('drop',e=>setFile(e.dataTransfer.files[0]));
+  function setFile(f){if(!f)return;if(f.type!=='application/pdf'&&!f.name.toLowerCase().endsWith('.pdf'))return alert('Selecione um arquivo PDF.');selectedFile=f;$('#fileInfo').style.display='block';$('#fileInfo').innerHTML=`<b>${f.name}</b><br>${(f.size/1024/1024).toFixed(2)} MB`;$('#processBtn').disabled=false}
+
+  $('#processBtn').onclick=processPDF; $('#exportBtn').onclick=exportExcel; $('#addBtn').onclick=()=>{rows.push(blankRow());render()};
+  $('#clearBtn').onclick=()=>{rows=[];pagesProcessed=0;selectedFile=null;$('#pdfFile').value='';$('#fileInfo').style.display='none';$('#rawText').value='';$('#progressWrap').style.display='none';$('#processBtn').disabled=true;render()};
+  $('#search').addEventListener('input',render); $('#reparseBtn').onclick=()=>{rows=parseAllText($('#rawText').value);render()};
+  function blankRow(){return{data:'',descricao:'',parcela:'',valor:0,portador:'',cartao:'',pagina:''}}
+
+  async function processPDF(){
+    if(!selectedFile)return; rows=[]; pagesProcessed=0; $('#rawText').value=''; $('#progressWrap').style.display='block'; $('#processBtn').disabled=true; $('#exportBtn').disabled=true;
+    try{
+      const data=await selectedFile.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data}).promise; let all='';
+      for(let p=1;p<=pdf.numPages;p++){
+        setProgress(((p-1)/pdf.numPages)*100,`Processando página ${p} de ${pdf.numPages}...`);
+        const page=await pdf.getPage(p); let text='';
+        const content=await page.getTextContent(); text=content.items.map(i=>i.str).join(' ');
+        if(clean(text).length<80){
+          const viewport=page.getViewport({scale:2.2}); const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
+          await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
+          const result=await Tesseract.recognize(canvas,'por',{logger:m=>{if(m.status==='recognizing text'){const base=(p-1)/pdf.numPages*100;const part=(m.progress/pdf.numPages)*100;setProgress(base+part,`OCR página ${p}: ${Math.round(m.progress*100)}%`)}}});
+          text=result.data.text;
+        }
+        all+=`\n\n===== PÁGINA ${p} =====\n${text}`; pagesProcessed=p;
+      }
+      $('#rawText').value=all.trim(); rows=parseAllText(all); setProgress(100,`Concluído: ${rows.length} transações encontradas.`); render();
+    }catch(err){console.error(err);setProgress(0,'Não foi possível processar o PDF. Tente novamente.');alert('Erro ao processar: '+err.message)}finally{$('#processBtn').disabled=false}
+  }
+  function setProgress(v,msg){$('#progressBar').style.width=Math.max(0,Math.min(100,v))+'%';$('#status').textContent=msg}
+
+  function parseAllText(text){
+    const pageParts=String(text).split(/=====\s*P[ÁA]GINA\s+(\d+)\s*=====/i); let result=[];
+    if(pageParts.length>1){for(let i=1;i<pageParts.length;i+=2) result.push(...parsePage(pageParts[i+1]||'',pageParts[i]));}
+    else result=parsePage(text,'');
+    return dedupe(result).filter(r=>r.descricao && r.valor!==0);
+  }
+  function parsePage(text,pageNo){
+    let t=String(text).replace(/\r/g,'\n').replace(/[|]/g,' '); let lines=t.split(/\n+/).map(clean).filter(Boolean); const out=[];
+    let portador='',cartao='';
+    for(const l of lines){
+      let m=l.match(/([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]{5,})\s*\(final\s*(\d{4})\)/i); if(m){portador=clean(m[1]);cartao=m[2]}
+      m=l.match(/final\s*(\d{4})/i); if(m)cartao=m[1];
+    }
+    const joined=lines.join('\n');
+    // Padrão principal: data, descrição, parcela opcional e valor no final.
+    const rg=/(\d{2}[\/.-]\d{2})(?:[\/.-]\d{2,4})?\s+([^\n]{2,90}?)\s+((?:\d{1,2}\s*[\/\-]\s*\d{1,2})|(?:\d{1,2}\s+de\s+\d{1,2}))?\s*(?:R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(?=\s|$)/gi;
+    let m; while((m=rg.exec(joined))){let desc=clean(m[2]).replace(/\bVALOR\s+EM\s+R\$\b/gi,'').trim(); if(ignoreLine(desc))continue;out.push({data:m[1].replace(/[.-]/g,'/'),descricao:desc,parcela:clean(m[3]||extractInstallment(desc)),valor:parseMoney(m[4]),portador,cartao,pagina:pageNo})}
+    // Fallback por linha, útil quando OCR preserva a tabela.
+    if(!out.length){for(const l of lines){const lm=l.match(/^(\d{2}[\/.-]\d{2})(?:[\/.-]\d{2,4})?\s+(.+?)\s+(?:R\$\s*)?(-?\d+(?:\.\d{3})*,\d{2})$/);if(lm&&!ignoreLine(lm[2]))out.push({data:lm[1].replace(/[.-]/g,'/'),descricao:clean(lm[2]),parcela:extractInstallment(lm[2]),valor:parseMoney(lm[3]),portador,cartao,pagina:pageNo})}}
+    return out;
+  }
+  function extractInstallment(s){const m=String(s).match(/\b(\d{1,2}\s*[\/\-]\s*\d{1,2})\b/);return m?m[1].replace(/\s/g,''):''}
+  function ignoreLine(s){return /(total|saldo|pagamento|limite|encargos|juros|pr[oó]xima fatura|valor da fatura|cr[eé]dito rotativo)/i.test(s)}
+  function dedupe(a){const seen=new Set();return a.filter(r=>{const k=[r.data,r.descricao.toUpperCase(),r.valor,r.pagina].join('|');if(seen.has(k))return false;seen.add(k);return true})}
+
+  function render(){
+    const q=$('#search').value.toLowerCase(); const shown=rows.map((r,i)=>({...r,_i:i})).filter(r=>!q||r.descricao.toLowerCase().includes(q)); const tb=$('#tbody');tb.innerHTML='';
+    shown.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`
+      <td><input class="cell small" data-k="data" data-i="${r._i}" value="${esc(r.data)}"></td>
+      <td><input class="cell" data-k="descricao" data-i="${r._i}" value="${esc(r.descricao)}"></td>
+      <td><input class="cell small" data-k="parcela" data-i="${r._i}" value="${esc(r.parcela)}"></td>
+      <td><input class="cell money" data-k="valor" data-i="${r._i}" value="${r.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></td>
+      <td><input class="cell" data-k="portador" data-i="${r._i}" value="${esc(r.portador)}"></td>
+      <td><input class="cell small" data-k="cartao" data-i="${r._i}" value="${esc(r.cartao)}"></td>
+      <td><input class="cell small" data-k="pagina" data-i="${r._i}" value="${esc(r.pagina)}"></td>
+      <td><button class="delete-row" data-del="${r._i}">×</button></td>`;tb.appendChild(tr)});
+    tb.querySelectorAll('input').forEach(inp=>inp.onchange=e=>{const i=+e.target.dataset.i,k=e.target.dataset.k;rows[i][k]=k==='valor'?parseMoney(e.target.value):e.target.value;render()});
+    tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.del,1);render()});
+    const has=rows.length>0;$('#empty').style.display=has?'none':'block';$('#tableWrap').style.display=has?'block':'none';$('#exportBtn').disabled=!has;$('#rowCount').textContent=shown.length;$('#metricCount').textContent=rows.length;$('#metricTotal').textContent=moneyBR(rows.reduce((s,r)=>s+(Number(r.valor)||0),0));$('#metricPages').textContent=pagesProcessed;
+  }
+  function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function exportExcel(){
+    if(!rows.length)return; const data=rows.map(r=>({'Data':r.data,'Estabelecimento / Descrição':r.descricao,'Parcela':r.parcela,'Valor (R$)':Number(r.valor)||0,'Portador':r.portador,'Final do cartão':r.cartao,'Página do PDF':r.pagina}));
+    const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:44},{wch:11},{wch:15},{wch:28},{wch:15},{wch:14}];
+    for(let i=2;i<=data.length+1;i++){if(ws['D'+i])ws['D'+i].z='R$ #,##0.00';}
+    const totalRow=data.length+3;XLSX.utils.sheet_add_aoa(ws,[['','','TOTAL',rows.reduce((s,r)=>s+(Number(r.valor)||0),0)]],{origin:`A${totalRow}`});if(ws['D'+totalRow])ws['D'+totalRow].z='R$ #,##0.00';
+    ws['!autofilter']={ref:`A1:G${data.length+1}`}; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Transações');
+    const name=(selectedFile?.name||'fatura').replace(/\.pdf$/i,'').replace(/[^a-z0-9áàâãéêíóôõúç_-]+/gi,'_');XLSX.writeFile(wb,`Transacoes_${name}.xlsx`);
+  }
+  render();
+</script>
+</body>
+</html>
