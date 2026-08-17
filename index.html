@@ -9,88 +9,177 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
-      --bg:#f4f7fb;--panel:#fff;--text:#142033;--muted:#6f7b8f;--primary:#ff6b00;
-      --primary-dark:#d95700;--navy:#102a43;--line:#dde5ef;--ok:#16794b;--warn:#b45309;--danger:#b42318;
-      --shadow:0 18px 45px rgba(20,32,51,.10)
+      --bg:#f6f7fb;--panel:#ffffff;--panel-soft:#fafbff;--text:#172033;--muted:#6b7280;
+      --primary:#ff5a1f;--primary-strong:#e64812;--primary-soft:#fff0e9;--navy:#0f2742;--navy-2:#17395f;
+      --line:#e5e9f0;--success:#0f8a5f;--success-soft:#eaf8f2;--danger:#c23b3b;--danger-soft:#fff1f1;
+      --shadow:0 16px 42px rgba(15,39,66,.08);--shadow-sm:0 6px 18px rgba(15,39,66,.06)
     }
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#eef3f9,#f9fbfd);color:var(--text)}
-    .app{max-width:1440px;margin:auto;padding:28px}.hero{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:22px}
-    .hero h1{margin:0;font-size:clamp(28px,4vw,46px);letter-spacing:-1.4px}.hero p{margin:9px 0 0;color:var(--muted);max-width:760px;line-height:1.55}
-    .badge{padding:10px 14px;border-radius:999px;background:#fff1e8;color:var(--primary-dark);font-weight:800;white-space:nowrap;border:1px solid #ffd4b5}
-    .grid{display:grid;grid-template-columns:380px 1fr;gap:22px}.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
-    .sidebar{padding:22px;height:max-content;position:sticky;top:18px}.section-title{font-size:14px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800;margin-bottom:12px}
-    .dropzone{border:2px dashed #cbd6e4;border-radius:18px;padding:28px 18px;text-align:center;cursor:pointer;transition:.2s;background:#fbfdff}
-    .dropzone:hover,.dropzone.drag{border-color:var(--primary);background:#fff8f2;transform:translateY(-1px)}
-    .dropzone .icon{font-size:44px}.dropzone strong{display:block;margin-top:8px;font-size:17px}.dropzone span{display:block;color:var(--muted);font-size:13px;margin-top:6px}
-    input[type=file]{display:none}.file-info{margin:14px 0;padding:12px;border-radius:12px;background:#f3f6fa;font-size:13px;word-break:break-word;display:none}
-    .controls{display:grid;gap:10px;margin-top:14px}.btn{border:0;border-radius:12px;padding:13px 16px;font-weight:800;cursor:pointer;transition:.18s;font-size:14px}
-    .btn:disabled{opacity:.45;cursor:not-allowed}.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover:not(:disabled){background:var(--primary-dark);transform:translateY(-1px)}
-    .btn-dark{background:var(--navy);color:#fff}.btn-light{background:#edf2f7;color:var(--navy)}.btn-danger{background:#fff0ee;color:var(--danger);border:1px solid #ffd1cc}
-    .progress-wrap{display:none;margin-top:16px}.progress{height:10px;background:#e7edf4;border-radius:999px;overflow:hidden}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--primary),#ff9a4d);transition:.25s}
-    .status{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.4}.tips{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12.5px;line-height:1.55}
-    .main{padding:20px;min-width:0}.toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px}
-    .toolbar-left,.toolbar-right{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.counter{font-weight:800}.counter span{color:var(--primary)}
-    .search{border:1px solid var(--line);border-radius:11px;padding:11px 13px;min-width:240px;outline:none}.search:focus{border-color:var(--primary)}
-    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;max-height:690px}table{border-collapse:separate;border-spacing:0;width:100%;min-width:1050px}
-    th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;text-align:left;padding:13px 10px;font-size:12px;letter-spacing:.03em}td{padding:8px 8px;border-bottom:1px solid #edf1f5;background:#fff;vertical-align:middle}
-    tr:hover td{background:#fffaf6}.cell{width:100%;border:1px solid transparent;border-radius:7px;padding:8px;background:transparent;font:inherit;min-width:75px}.cell:hover,.cell:focus{border-color:#cfd9e5;background:#fff;outline:none}
-    .money{text-align:right;min-width:110px}.small{width:70px}.delete-row{border:0;background:#fff0ee;color:var(--danger);width:34px;height:34px;border-radius:9px;cursor:pointer;font-weight:900}
-    .empty{padding:70px 20px;text-align:center;color:var(--muted)}.empty .big{font-size:58px;filter:grayscale(.3);opacity:.75}.empty h3{color:var(--text);margin:12px 0 6px}
-    .summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;margin-bottom:14px}.metric{padding:16px;border:1px solid var(--line);border-radius:15px;background:#fbfdff}.metric small{color:var(--muted);font-weight:700}.metric strong{display:block;font-size:24px;margin-top:6px}
-    details{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfdff}summary{cursor:pointer;font-weight:800}.raw{width:100%;min-height:190px;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:Consolas,monospace;font-size:12px}
-    @media(max-width:980px){.grid{grid-template-columns:1fr}.sidebar{position:static}.hero{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr}.app{padding:16px}}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,textarea{font:inherit}
+    .app{min-height:100vh}
+    .topbar{background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;position:relative;overflow:hidden}
+    .topbar:after{content:"";position:absolute;right:-110px;top:-160px;width:380px;height:380px;border-radius:50%;background:rgba(255,255,255,.05)}
+    .topbar-inner{max-width:1480px;margin:auto;padding:34px 28px 40px;position:relative;z-index:1}
+    .brand-row{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.01em}
+    .brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#ff7b45,var(--primary));display:grid;place-items:center;box-shadow:0 10px 24px rgba(255,90,31,.28)}
+    .brand-mark svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2}
+    .author{font-size:12px;color:#d8e2ef;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:8px 11px;border-radius:999px;white-space:nowrap}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:end}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#ffd6c5;margin-bottom:12px}
+    .eyebrow-dot{width:7px;height:7px;border-radius:50%;background:#ff8b5e;box-shadow:0 0 0 5px rgba(255,139,94,.12)}
+    .hero h1{margin:0;max-width:860px;font-size:clamp(32px,4.4vw,58px);line-height:1.02;letter-spacing:-.035em}
+    .hero p{margin:14px 0 0;max-width:900px;color:#cbd7e4;line-height:1.6;font-size:15px}
+    .hero-badge{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;min-width:250px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px}
+    .hero-badge .icon{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.10);display:grid;place-items:center;font-size:19px;grid-row:span 2}
+    .hero-badge strong{font-size:13px}.hero-badge span{font-size:12px;color:#cbd7e4}
+    .workspace{max-width:1480px;margin:-18px auto 0;padding:0 28px 34px;position:relative;z-index:3}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-sm);padding:10px;margin-bottom:18px}
+    .step{display:flex;gap:11px;align-items:center;padding:10px 14px;border-radius:12px;color:var(--muted)}
+    .step + .step{border-left:1px solid var(--line)}
+    .step-no{width:28px;height:28px;border-radius:9px;background:#f0f3f7;display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--navy)}
+    .step.active{background:var(--primary-soft);color:var(--primary-strong)}.step.active .step-no{background:var(--primary);color:#fff}
+    .step strong{display:block;font-size:13px}.step span{display:block;font-size:11px;margin-top:2px}
+    .grid{display:grid;grid-template-columns:350px minmax(0,1fr);gap:18px;align-items:start}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-sm)}
+    .sidebar{padding:18px;position:sticky;top:18px}
+    .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .section-title{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:900}
+    .section-sub{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+    .dropzone{border:1.5px dashed #cbd4df;border-radius:16px;padding:26px 16px;text-align:center;cursor:pointer;transition:.2s;background:var(--panel-soft)}
+    .dropzone:hover,.dropzone.drag{border-color:var(--primary);background:var(--primary-soft);transform:translateY(-1px)}
+    .dropzone .icon{width:52px;height:52px;margin:0 auto;border-radius:15px;background:#fff;display:grid;place-items:center;font-size:25px;box-shadow:var(--shadow-sm)}
+    .dropzone strong{display:block;margin-top:12px;font-size:15px;color:var(--navy)}
+    .dropzone span{display:block;color:var(--muted);font-size:12px;margin-top:5px;line-height:1.45}
+    input[type=file]{display:none}.file-info{margin:12px 0 0;padding:11px 12px;border-radius:12px;background:#f3f6fa;border:1px solid var(--line);font-size:12px;word-break:break-word;display:none}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.controls .btn:first-child,.controls .btn:nth-child(2){grid-column:1/-1}
+    .btn{border:0;border-radius:11px;padding:11px 13px;font-weight:800;cursor:pointer;transition:.18s;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}.btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 18px rgba(255,90,31,.18)}
+    .btn-primary:hover:not(:disabled){background:var(--primary-strong);transform:translateY(-1px)}
+    .btn-dark{background:var(--navy);color:#fff}.btn-dark:hover:not(:disabled){background:#0a1d31;transform:translateY(-1px)}
+    .btn-light{background:#f1f4f8;color:var(--navy);border:1px solid #e6eaf0}.btn-light:hover{background:#e9eef4}
+    .btn-danger{background:var(--danger-soft);color:var(--danger);border:1px solid #ffdada}.btn-danger:hover{background:#ffe8e8}
+    .progress-wrap{display:none;margin-top:14px;padding:12px;border-radius:13px;background:#fbfcfe;border:1px solid var(--line)}
+    .progress{height:8px;background:#e8edf3;border-radius:999px;overflow:hidden}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--primary),#ff996f);transition:.25s}
+    .status{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.4}
+    .tips{margin-top:14px;padding:13px;border-radius:13px;background:#fff9f6;border:1px solid #ffe0d1;color:#7e4f3c;font-size:11.5px;line-height:1.55}
+    .main{padding:18px;min-width:0}
+    .summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+    .metric{padding:15px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(180deg,#fff,#fbfcfe)}
+    .metric-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.metric small{color:var(--muted);font-weight:750;font-size:11px}.metric .mini-icon{font-size:14px}
+    .metric strong{display:block;font-size:23px;margin-top:7px;letter-spacing:-.02em;color:var(--navy)}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px;padding:2px 2px 0}
+    .toolbar-left,.toolbar-right{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.counter{font-weight:800;font-size:13px;color:var(--navy)}.counter span{color:var(--primary)}
+    .search{border:1px solid var(--line);background:#fbfcfe;border-radius:11px;padding:10px 12px;min-width:270px;outline:none;font-size:13px;transition:.18s}.search:focus{border-color:#ffb397;box-shadow:0 0 0 3px rgba(255,90,31,.08);background:#fff}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px;max-height:650px;background:#fff}
+    table{border-collapse:separate;border-spacing:0;width:100%;min-width:1260px}
+    th{position:sticky;top:0;z-index:2;background:#f1f4f8;color:#445165;text-align:left;padding:11px 9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.045em;border-bottom:1px solid #dde3eb}
+    td{padding:6px 6px;border-bottom:1px solid #edf1f5;background:#fff;vertical-align:middle}
+    tr:hover td{background:#fcfdff}.cell{width:100%;border:1px solid transparent;border-radius:7px;padding:7px 8px;background:transparent;font:inherit;font-size:12px;min-width:75px;color:#243148}.cell:hover,.cell:focus{border-color:#d7dee8;background:#fff;outline:none;box-shadow:0 0 0 2px rgba(23,57,95,.04)}
+    .money{text-align:right;min-width:110px}.small{width:78px}.delete-row{border:0;background:transparent;color:#a94444;width:31px;height:31px;border-radius:8px;cursor:pointer;font-weight:900;font-size:17px}.delete-row:hover{background:var(--danger-soft)}
+    .empty{padding:74px 20px;text-align:center;color:var(--muted)}.empty .big{width:64px;height:64px;margin:auto;display:grid;place-items:center;border-radius:18px;background:#f2f5f9;font-size:30px}.empty h3{color:var(--navy);margin:14px 0 6px;font-size:18px}.empty div:last-child{font-size:13px}
+    details{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px 13px;background:#fbfcfe}summary{cursor:pointer;font-weight:800;font-size:12px;color:#40516a}.raw{width:100%;min-height:190px;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:11px;font-family:Consolas,monospace;font-size:11px;background:#fff;outline:none}.raw:focus{border-color:#b9c4d2}
+    @media(max-width:1080px){.grid{grid-template-columns:1fr}.sidebar{position:static}.hero{grid-template-columns:1fr}.hero-badge{max-width:420px}.steps{grid-template-columns:1fr}.step + .step{border-left:0;border-top:1px solid var(--line)}}
+    @media(max-width:720px){.topbar-inner,.workspace{padding-left:16px;padding-right:16px}.brand-row{align-items:flex-start}.author{display:none}.hero h1{font-size:36px}.summary{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.controls .btn{grid-column:1/-1}.search{min-width:100%;width:100%}.toolbar-right{width:100%}.workspace{margin-top:-10px}}
   </style>
 </head>
 <body>
 <div class="app">
-  <header class="hero">
-    <div><h1>PDF de cartão → Excel</h1><p>Envie a fatura, o sistema lê as páginas com OCR, identifica as transações e monta uma tabela editável antes de gerar o arquivo Excel.</p></div>
-    <div class="badge">Criado por Roberto Lino</div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-row">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg>
+          </div>
+          <span>Conciliação Financeira</span>
+        </div>
+        <div class="author">Criado por Roberto Lino</div>
+      </div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-dot"></span> Conversor inteligente</div>
+          <h1>Fatura de cartão para Excel, sem perder o histórico original.</h1>
+          <p>O sistema lê PDF nativo ou digitalizado, começa pela seção de lançamentos, preserva caracteres importantes como <strong>*</strong> e usa o sinal do valor para diferenciar crédito e débito.</p>
+        </div>
+        <div class="hero-badge">
+          <div class="icon">✓</div>
+          <strong>Leitura orientada à conciliação</strong>
+          <span>Mais rastreabilidade e menos ajuste manual.</span>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <div class="grid">
-    <aside class="card sidebar">
-      <div class="section-title">1. Selecione a fatura</div>
-      <label class="dropzone" id="dropzone" for="pdfFile">
-        <div class="icon">📄</div><strong>Clique ou arraste o PDF</strong><span>Compatível com PDF digitalizado e PDF com texto</span>
-      </label>
-      <input id="pdfFile" type="file" accept="application/pdf,.pdf" />
-      <div class="file-info" id="fileInfo"></div>
+  <div class="workspace">
+    <div class="steps" aria-label="Etapas do processo">
+      <div class="step active"><div class="step-no">1</div><div><strong>Selecionar fatura</strong><span>Envie o PDF para leitura.</span></div></div>
+      <div class="step"><div class="step-no">2</div><div><strong>Revisar lançamentos</strong><span>Confira os dados extraídos.</span></div></div>
+      <div class="step"><div class="step-no">3</div><div><strong>Exportar Excel</strong><span>Baixe a base pronta para conciliar.</span></div></div>
+    </div>
 
-      <div class="controls">
-        <button class="btn btn-primary" id="processBtn" disabled>🔎 Ler e converter</button>
-        <button class="btn btn-dark" id="exportBtn" disabled>⬇️ Baixar Excel</button>
-        <button class="btn btn-light" id="addBtn">＋ Adicionar linha manual</button>
-        <button class="btn btn-danger" id="clearBtn">Limpar tudo</button>
-      </div>
-      <div class="progress-wrap" id="progressWrap"><div class="progress"><div class="progress-bar" id="progressBar"></div></div><div class="status" id="status">Aguardando...</div></div>
-      <div class="tips"><b>Dica:</b> faturas bancárias mudam de layout. Revise a prévia antes de exportar. O sistema foi preparado para reconhecer linhas como <i>data + estabelecimento + parcela + valor</i>, inclusive no padrão Itaú.</div>
-    </aside>
+    <div class="grid">
+      <aside class="card sidebar">
+        <div class="panel-head">
+          <div><div class="section-title">Arquivo de entrada</div><div class="section-sub">Use PDF com texto ou digitalizado.</div></div>
+        </div>
+        <label class="dropzone" id="dropzone" for="pdfFile">
+          <div class="icon">📄</div>
+          <strong>Clique ou arraste o PDF</strong>
+          <span>A leitura preserva o histórico do lançamento como aparece na fatura.</span>
+        </label>
+        <input id="pdfFile" type="file" accept="application/pdf,.pdf" />
+        <div class="file-info" id="fileInfo"></div>
 
-    <main class="card main">
-      <div class="summary">
-        <div class="metric"><small>Transações encontradas</small><strong id="metricCount">0</strong></div>
-        <div class="metric"><small>Valor total</small><strong id="metricTotal">R$ 0,00</strong></div>
-        <div class="metric"><small>Páginas processadas</small><strong id="metricPages">0</strong></div>
-      </div>
-      <div class="toolbar">
-        <div class="toolbar-left"><div class="counter">Prévia: <span id="rowCount">0</span> linhas</div></div>
-        <div class="toolbar-right"><input class="search" id="search" placeholder="Filtrar estabelecimento..." /></div>
-      </div>
-      <div id="empty" class="empty"><div class="big">🧾</div><h3>Nenhuma fatura processada</h3><div>Selecione o PDF ao lado e clique em “Ler e converter”.</div></div>
-      <div class="table-wrap" id="tableWrap" style="display:none">
-        <table><thead><tr><th>Data</th><th>Estabelecimento / descrição</th><th>Parcela</th><th>Valor</th><th>Portador</th><th>Final cartão</th><th>Página</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
-      </div>
-      <details><summary>Texto reconhecido pelo OCR</summary><textarea class="raw" id="rawText" placeholder="O texto extraído aparecerá aqui..."></textarea><button class="btn btn-light" id="reparseBtn" style="margin-top:8px">Reprocessar texto editado</button></details>
-    </main>
+        <div class="controls">
+          <button class="btn btn-primary" id="processBtn" disabled>🔎 Ler e converter</button>
+          <button class="btn btn-dark" id="exportBtn" disabled>⬇️ Baixar Excel</button>
+          <button class="btn btn-light" id="addBtn">＋ Adicionar linha</button>
+          <button class="btn btn-danger" id="clearBtn">Limpar</button>
+        </div>
+        <div class="progress-wrap" id="progressWrap"><div class="progress"><div class="progress-bar" id="progressBar"></div></div><div class="status" id="status">Aguardando...</div></div>
+        <div class="tips"><b>Regra de leitura:</b> o parser procura a área de <i>Lançamentos</i>, mantém caracteres como <b>*</b> no histórico e interpreta sinal negativo antes ou depois do valor como <b>Crédito</b>.</div>
+      </aside>
+
+      <main class="card main">
+        <div class="summary">
+          <div class="metric"><div class="metric-top"><small>TRANSAÇÕES ENCONTRADAS</small><span class="mini-icon">🧾</span></div><strong id="metricCount">0</strong></div>
+          <div class="metric"><div class="metric-top"><small>VALOR TOTAL</small><span class="mini-icon">R$</span></div><strong id="metricTotal">R$ 0,00</strong></div>
+          <div class="metric"><div class="metric-top"><small>PÁGINAS PROCESSADAS</small><span class="mini-icon">📑</span></div><strong id="metricPages">0</strong></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left"><div class="counter">Prévia de lançamentos · <span id="rowCount">0</span> linhas</div></div>
+          <div class="toolbar-right"><input class="search" id="search" placeholder="Buscar histórico ou cidade..." /></div>
+        </div>
+
+        <div id="empty" class="empty"><div class="big">↥</div><h3>Nenhuma fatura processada</h3><div>Selecione um PDF ao lado e clique em “Ler e converter”.</div></div>
+        <div class="table-wrap" id="tableWrap" style="display:none">
+          <table><thead><tr><th>Data</th><th>Histórico de Lançamentos</th><th>Cidade</th><th>US$</th><th>Cotação do Dólar</th><th>R$</th><th>Tipo</th><th>Portador</th><th>Final cartão</th><th>Página</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+        </div>
+
+        <details><summary>Ver texto reconhecido pelo OCR</summary><textarea class="raw" id="rawText" placeholder="O texto extraído aparecerá aqui..."></textarea><button class="btn btn-light" id="reparseBtn" style="margin-top:8px">Reprocessar texto editado</button></details>
+      </main>
+    </div>
   </div>
 </div>
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const $=s=>document.querySelector(s); let selectedFile=null; let rows=[]; let pagesProcessed=0;
   const moneyBR=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-  const parseMoney=s=>{ if(typeof s==='number')return s; s=String(s||'').replace(/R\$\s?/gi,'').replace(/\s/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.-]/g,''); return Number(s)||0 };
-  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const parseMoney=s=>{
+    if(typeof s==='number') return s;
+    let raw=String(s??'').trim();
+    const negative=/^\s*[-−–—]/.test(raw)||/[-−–—]\s*$/.test(raw)||/^\s*\(/.test(raw);
+    raw=raw.replace(/R\$\s?/gi,'').replace(/[()]/g,'').replace(/[−–—]/g,'-').replace(/\s/g,'')
+           .replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
+    const n=Number(raw.replace(/-/g,''))||0;
+    return negative ? -Math.abs(n) : n;
+  };
+  const compact=s=>String(s??'').replace(/[\t\u00a0]+/g,' ').replace(/ {2,}/g,' ').trim();
+  const normalizeDash=s=>String(s??'').replace(/[−–—]/g,'-');
 
   $('#pdfFile').addEventListener('change',e=>setFile(e.target.files[0]));
   const dz=$('#dropzone'); ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag')}));
@@ -101,7 +190,23 @@
   $('#processBtn').onclick=processPDF; $('#exportBtn').onclick=exportExcel; $('#addBtn').onclick=()=>{rows.push(blankRow());render()};
   $('#clearBtn').onclick=()=>{rows=[];pagesProcessed=0;selectedFile=null;$('#pdfFile').value='';$('#fileInfo').style.display='none';$('#rawText').value='';$('#progressWrap').style.display='none';$('#processBtn').disabled=true;render()};
   $('#search').addEventListener('input',render); $('#reparseBtn').onclick=()=>{rows=parseAllText($('#rawText').value);render()};
-  function blankRow(){return{data:'',descricao:'',parcela:'',valor:0,portador:'',cartao:'',pagina:''}}
+  function blankRow(){return{data:'',descricao:'',cidade:'',usd:'',cotacao:'',valor:0,tipo:'',portador:'',cartao:'',pagina:'',linhaOriginal:''}}
+
+  // Reconstrói as linhas do PDF usando coordenadas. Isso evita o join(' ') que misturava colunas
+  // e também preserva caracteres importantes do histórico, como *.
+  function textContentToLines(content){
+    const items=(content.items||[]).filter(i=>String(i.str??'').length);
+    const rowsByY=[];
+    const tolerance=2.5;
+    for(const item of items){
+      const y=item.transform?.[5]??0, x=item.transform?.[4]??0;
+      let row=rowsByY.find(r=>Math.abs(r.y-y)<=tolerance);
+      if(!row){row={y,items:[]};rowsByY.push(row)}
+      row.items.push({x,str:String(item.str)});
+    }
+    rowsByY.sort((a,b)=>b.y-a.y);
+    return rowsByY.map(r=>r.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+$/,'')).join('\n');
+  }
 
   async function processPDF(){
     if(!selectedFile)return; rows=[]; pagesProcessed=0; $('#rawText').value=''; $('#progressWrap').style.display='block'; $('#processBtn').disabled=true; $('#exportBtn').disabled=true;
@@ -110,16 +215,16 @@
       for(let p=1;p<=pdf.numPages;p++){
         setProgress(((p-1)/pdf.numPages)*100,`Processando página ${p} de ${pdf.numPages}...`);
         const page=await pdf.getPage(p); let text='';
-        const content=await page.getTextContent(); text=content.items.map(i=>i.str).join(' ');
-        if(clean(text).length<80){
-          const viewport=page.getViewport({scale:2.2}); const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
+        const content=await page.getTextContent(); text=textContentToLines(content);
+        if(compact(text).length<80){
+          const viewport=page.getViewport({scale:2.6}); const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
           await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
           const result=await Tesseract.recognize(canvas,'por',{logger:m=>{if(m.status==='recognizing text'){const base=(p-1)/pdf.numPages*100;const part=(m.progress/pdf.numPages)*100;setProgress(base+part,`OCR página ${p}: ${Math.round(m.progress*100)}%`)}}});
           text=result.data.text;
         }
         all+=`\n\n===== PÁGINA ${p} =====\n${text}`; pagesProcessed=p;
       }
-      $('#rawText').value=all.trim(); rows=parseAllText(all); setProgress(100,`Concluído: ${rows.length} transações encontradas.`); render();
+      $('#rawText').value=all.trim(); rows=parseAllText(all); setProgress(100,`Concluído: ${rows.length} lançamentos encontrados.`); render();
     }catch(err){console.error(err);setProgress(0,'Não foi possível processar o PDF. Tente novamente.');alert('Erro ao processar: '+err.message)}finally{$('#processBtn').disabled=false}
   }
   function setProgress(v,msg){$('#progressBar').style.width=Math.max(0,Math.min(100,v))+'%';$('#status').textContent=msg}
@@ -128,50 +233,104 @@
     const pageParts=String(text).split(/=====\s*P[ÁA]GINA\s+(\d+)\s*=====/i); let result=[];
     if(pageParts.length>1){for(let i=1;i<pageParts.length;i+=2) result.push(...parsePage(pageParts[i+1]||'',pageParts[i]));}
     else result=parsePage(text,'');
-    return dedupe(result).filter(r=>r.descricao && r.valor!==0);
+    return dedupe(result).filter(r=>r.descricao && (r.data || r.valor!==0));
   }
+
+  function isHeaderLine(s){
+    const n=compact(s).toLowerCase();
+    return (n.includes('histórico')||n.includes('historico')) && n.includes('data') && (n.includes('r$')||n.includes('cotação')||n.includes('cotacao'));
+  }
+  function isSectionStart(s){return /\blan[çc]amentos\b/i.test(s)}
+  function isSectionEnd(s){return /\b(total\s+(?:de\s+)?lan[çc]amentos|pagamento\s+m[ií]nimo|encargos|limite\s+dispon[ií]vel|resumo\s+da\s+fatura)\b/i.test(s)}
+  function isCardLine(s){return /cart[aã]o\s+\d{4}\s+x{3,}\s*\d{4}/i.test(s)}
+
   function parsePage(text,pageNo){
-    let t=String(text).replace(/\r/g,'\n').replace(/[|]/g,' '); let lines=t.split(/\n+/).map(clean).filter(Boolean); const out=[];
-    let portador='',cartao='';
-    for(const l of lines){
-      let m=l.match(/([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]{5,})\s*\(final\s*(\d{4})\)/i); if(m){portador=clean(m[1]);cartao=m[2]}
-      m=l.match(/final\s*(\d{4})/i); if(m)cartao=m[1];
+    // Não remove * nem outros caracteres do histórico. Só normaliza CR e espaços externos.
+    const rawLines=String(text).replace(/\r/g,'\n').split(/\n+/).map(s=>s.trimEnd()).filter(s=>s.trim().length);
+    const out=[]; let portador='',cartao='',inTable=false,seenHeader=false;
+
+    for(let idx=0;idx<rawLines.length;idx++){
+      const original=rawLines[idx]; const line=original.trim();
+      if(isSectionStart(line)) inTable=true;
+      if(isHeaderLine(line)){inTable=true;seenHeader=true;continue}
+      if(!inTable && !seenHeader) continue; // começa somente na área de Lançamentos/cabeçalho cinza
+      if(isSectionEnd(line)) break;
+
+      let cm=line.match(/cart[aã]o\s+(\d{4})\s+x{3,}\s*(\d{4})/i);
+      if(cm){cartao=cm[2]; continue}
+      let fm=line.match(/final\s*(\d{4})/i); if(fm)cartao=fm[1];
+      let pm=line.match(/^([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ .'-]{4,})\s+(?:cart[aã]o|final\b)/i); if(pm)portador=pm[1].trim();
+
+      if(isHeaderLine(line)||isCardLine(line)||/^copastur\b/i.test(line)) continue;
+      const parsed=parseTransactionLine(line,pageNo,portador,cartao);
+      if(parsed) out.push(parsed);
     }
-    const joined=lines.join('\n');
-    // Padrão principal: data, descrição, parcela opcional e valor no final.
-    const rg=/(\d{2}[\/.-]\d{2})(?:[\/.-]\d{2,4})?\s+([^\n]{2,90}?)\s+((?:\d{1,2}\s*[\/\-]\s*\d{1,2})|(?:\d{1,2}\s+de\s+\d{1,2}))?\s*(?:R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(?=\s|$)/gi;
-    let m; while((m=rg.exec(joined))){let desc=clean(m[2]).replace(/\bVALOR\s+EM\s+R\$\b/gi,'').trim(); if(ignoreLine(desc))continue;out.push({data:m[1].replace(/[.-]/g,'/'),descricao:desc,parcela:clean(m[3]||extractInstallment(desc)),valor:parseMoney(m[4]),portador,cartao,pagina:pageNo})}
-    // Fallback por linha, útil quando OCR preserva a tabela.
-    if(!out.length){for(const l of lines){const lm=l.match(/^(\d{2}[\/.-]\d{2})(?:[\/.-]\d{2,4})?\s+(.+?)\s+(?:R\$\s*)?(-?\d+(?:\.\d{3})*,\d{2})$/);if(lm&&!ignoreLine(lm[2]))out.push({data:lm[1].replace(/[.-]/g,'/'),descricao:clean(lm[2]),parcela:extractInstallment(lm[2]),valor:parseMoney(lm[3]),portador,cartao,pagina:pageNo})}}
     return out;
   }
-  function extractInstallment(s){const m=String(s).match(/\b(\d{1,2}\s*[\/\-]\s*\d{1,2})\b/);return m?m[1].replace(/\s/g,''):''}
-  function ignoreLine(s){return /(total|saldo|pagamento|limite|encargos|juros|pr[oó]xima fatura|valor da fatura|cr[eé]dito rotativo)/i.test(s)}
-  function dedupe(a){const seen=new Set();return a.filter(r=>{const k=[r.data,r.descricao.toUpperCase(),r.valor,r.pagina].join('|');if(seen.has(k))return false;seen.add(k);return true})}
+
+  function parseTransactionLine(line,pageNo,portador,cartao){
+    const m=line.match(/^\s*(\d{2}[\/.\-]\d{2})(?:[\/.\-]\d{2,4})?\s+(.+)$/);
+    if(!m) return null;
+    const data=m[1].replace(/[.\-]/g,'/');
+    const rest=m[2];
+
+    // Captura o valor em R$ no fim da linha. Aceita sinal antes OU depois (ex.: -1.039,55 / 1.039,55- / 1.039,55 –).
+    const valueMatch=rest.match(/(?:R\$\s*)?([-−–—]?\s*\d{1,3}(?:\.\d{3})*,\d{2}|[-−–—]?\s*\d+,\d{2})\s*([-−–—])?\s*$/);
+    if(!valueMatch) return null;
+    const valueToken=((valueMatch[1]||'')+(valueMatch[2]||'')).trim();
+    const valor=parseMoney(valueToken);
+    const beforeValue=rest.slice(0,valueMatch.index).trimEnd();
+
+    // Colunas opcionais imediatamente antes de R$: cotação e US$. Retiramos só quando têm formato numérico inequívoco.
+    let descricaoCidade=beforeValue, usd='',cotacao='';
+    let q=descricaoCidade.match(/\s+([-−–—]?\d+(?:[.,]\d+)?)\s*$/);
+    if(q && /[.,]\d{2,}/.test(q[1])){cotacao=q[1];descricaoCidade=descricaoCidade.slice(0,q.index).trimEnd();}
+    q=descricaoCidade.match(/\s+([-−–—]?\d+(?:[.,]\d+)?)\s*$/);
+    if(q && /[.,]\d{2}/.test(q[1])){usd=q[1];descricaoCidade=descricaoCidade.slice(0,q.index).trimEnd();}
+
+    const split=splitDescriptionCity(descricaoCidade);
+    return {data,descricao:split.descricao,cidade:split.cidade,usd,cotacao,valor,tipo:valor<0?'Crédito':'Débito',portador,cartao,pagina:pageNo,linhaOriginal:line};
+  }
+
+  function splitDescriptionCity(s){
+    // Cidade costuma vir no final em caixa alta. Mantemos todo o texto anterior literalmente (inclusive *).
+    const cityMatch=s.match(/^(.*?)(?:\s{2,}|\s)([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ .'-]{2,24})$/);
+    if(cityMatch){
+      const possible=cityMatch[2].trim();
+      if(/^(SAO PAULO|SÃO PAULO|RIO DE JANEIRO|BRASILIA|BRASÍLIA|CURITIBA|CAMPINAS|SALVADOR|RECIFE|BELO HORIZONTE|PORTO ALEGRE|FORTALEZA|MANAUS|GOIANIA|GOIÂNIA)$/i.test(possible))
+        return {descricao:cityMatch[1].trimEnd(),cidade:possible};
+    }
+    return {descricao:s.trimEnd(),cidade:''};
+  }
+
+  function dedupe(a){const seen=new Set();return a.filter(r=>{const k=[r.data,r.linhaOriginal,r.pagina].join('|');if(seen.has(k))return false;seen.add(k);return true})}
 
   function render(){
-    const q=$('#search').value.toLowerCase(); const shown=rows.map((r,i)=>({...r,_i:i})).filter(r=>!q||r.descricao.toLowerCase().includes(q)); const tb=$('#tbody');tb.innerHTML='';
+    const q=$('#search').value.toLowerCase(); const shown=rows.map((r,i)=>({...r,_i:i})).filter(r=>!q||`${r.descricao} ${r.cidade}`.toLowerCase().includes(q)); const tb=$('#tbody');tb.innerHTML='';
     shown.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`
       <td><input class="cell small" data-k="data" data-i="${r._i}" value="${esc(r.data)}"></td>
-      <td><input class="cell" data-k="descricao" data-i="${r._i}" value="${esc(r.descricao)}"></td>
-      <td><input class="cell small" data-k="parcela" data-i="${r._i}" value="${esc(r.parcela)}"></td>
-      <td><input class="cell money" data-k="valor" data-i="${r._i}" value="${r.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></td>
+      <td><input class="cell" data-k="descricao" data-i="${r._i}" value="${esc(r.descricao)}" title="${esc(r.linhaOriginal||'')}"></td>
+      <td><input class="cell" data-k="cidade" data-i="${r._i}" value="${esc(r.cidade)}"></td>
+      <td><input class="cell money" data-k="usd" data-i="${r._i}" value="${esc(r.usd)}"></td>
+      <td><input class="cell money" data-k="cotacao" data-i="${r._i}" value="${esc(r.cotacao)}"></td>
+      <td><input class="cell money" data-k="valor" data-i="${r._i}" value="${Number(r.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></td>
+      <td><input class="cell small" data-k="tipo" data-i="${r._i}" value="${esc(r.tipo)}"></td>
       <td><input class="cell" data-k="portador" data-i="${r._i}" value="${esc(r.portador)}"></td>
       <td><input class="cell small" data-k="cartao" data-i="${r._i}" value="${esc(r.cartao)}"></td>
       <td><input class="cell small" data-k="pagina" data-i="${r._i}" value="${esc(r.pagina)}"></td>
       <td><button class="delete-row" data-del="${r._i}">×</button></td>`;tb.appendChild(tr)});
-    tb.querySelectorAll('input').forEach(inp=>inp.onchange=e=>{const i=+e.target.dataset.i,k=e.target.dataset.k;rows[i][k]=k==='valor'?parseMoney(e.target.value):e.target.value;render()});
+    tb.querySelectorAll('input').forEach(inp=>inp.onchange=e=>{const i=+e.target.dataset.i,k=e.target.dataset.k;rows[i][k]=k==='valor'?parseMoney(e.target.value):e.target.value;if(k==='valor')rows[i].tipo=rows[i].valor<0?'Crédito':'Débito';render()});
     tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.del,1);render()});
     const has=rows.length>0;$('#empty').style.display=has?'none':'block';$('#tableWrap').style.display=has?'block':'none';$('#exportBtn').disabled=!has;$('#rowCount').textContent=shown.length;$('#metricCount').textContent=rows.length;$('#metricTotal').textContent=moneyBR(rows.reduce((s,r)=>s+(Number(r.valor)||0),0));$('#metricPages').textContent=pagesProcessed;
   }
   function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
   function exportExcel(){
-    if(!rows.length)return; const data=rows.map(r=>({'Data':r.data,'Estabelecimento / Descrição':r.descricao,'Parcela':r.parcela,'Valor (R$)':Number(r.valor)||0,'Portador':r.portador,'Final do cartão':r.cartao,'Página do PDF':r.pagina}));
-    const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:44},{wch:11},{wch:15},{wch:28},{wch:15},{wch:14}];
-    for(let i=2;i<=data.length+1;i++){if(ws['D'+i])ws['D'+i].z='R$ #,##0.00';}
-    const totalRow=data.length+3;XLSX.utils.sheet_add_aoa(ws,[['','','TOTAL',rows.reduce((s,r)=>s+(Number(r.valor)||0),0)]],{origin:`A${totalRow}`});if(ws['D'+totalRow])ws['D'+totalRow].z='R$ #,##0.00';
-    ws['!autofilter']={ref:`A1:G${data.length+1}`}; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Transações');
-    const name=(selectedFile?.name||'fatura').replace(/\.pdf$/i,'').replace(/[^a-z0-9áàâãéêíóôõúç_-]+/gi,'_');XLSX.writeFile(wb,`Transacoes_${name}.xlsx`);
+    if(!rows.length)return; const data=rows.map(r=>({'Data':r.data,'Histórico de Lançamentos':r.descricao,'Cidade':r.cidade,'US$':r.usd,'Cotação do Dólar':r.cotacao,'R$':Number(r.valor)||0,'Tipo':r.tipo,'Portador':r.portador,'Final do cartão':r.cartao,'Página do PDF':r.pagina,'Linha original':r.linhaOriginal||''}));
+    const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:50},{wch:20},{wch:14},{wch:18},{wch:15},{wch:12},{wch:28},{wch:15},{wch:14},{wch:80}];
+    for(let i=2;i<=data.length+1;i++){if(ws['F'+i])ws['F'+i].z='R$ #,##0.00;[Red]-R$ #,##0.00';}
+    const totalRow=data.length+3;XLSX.utils.sheet_add_aoa(ws,[['','','','','TOTAL',rows.reduce((s,r)=>s+(Number(r.valor)||0),0)]],{origin:`A${totalRow}`});if(ws['F'+totalRow])ws['F'+totalRow].z='R$ #,##0.00;[Red]-R$ #,##0.00';
+    ws['!autofilter']={ref:`A1:K${data.length+1}`}; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lançamentos');
+    const name=(selectedFile?.name||'fatura').replace(/\.pdf$/i,'').replace(/[^a-z0-9áàâãéêíóôõúç_-]+/gi,'_');XLSX.writeFile(wb,`Lancamentos_${name}.xlsx`);
   }
   render();
 </script>
