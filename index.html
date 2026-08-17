@@ -66,10 +66,18 @@
     .status{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.4}
     .tips{margin-top:14px;padding:13px;border-radius:13px;background:#fff9f6;border:1px solid #ffe0d1;color:#7e4f3c;font-size:11.5px;line-height:1.55}
     .main{padding:18px;min-width:0}
-    .summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin-bottom:14px}
     .metric{padding:15px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(180deg,#fff,#fbfcfe)}
     .metric-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.metric small{color:var(--muted);font-weight:750;font-size:11px}.metric .mini-icon{font-size:14px}
     .metric strong{display:block;font-size:23px;margin-top:7px;letter-spacing:-.02em;color:var(--navy)}
+    .metric.validation-ok{border-color:#b8ead7;background:var(--success-soft)}.metric.validation-ok strong{color:var(--success)}
+    .metric.validation-bad{border-color:#ffd2d2;background:var(--danger-soft)}.metric.validation-bad strong{color:var(--danger)}
+    .metric.validation-warn{border-color:#ffe1b8;background:#fff8ec}.metric.validation-warn strong{color:#a86108}
+    .validation-box{display:none;margin:0 0 14px;padding:13px 14px;border-radius:14px;border:1px solid var(--line);font-size:12.5px;line-height:1.5}
+    .validation-box.ok{display:block;background:var(--success-soft);border-color:#b8ead7;color:#0c6848}
+    .validation-box.bad{display:block;background:var(--danger-soft);border-color:#ffd2d2;color:#9d2d2d}
+    .validation-box.warn{display:block;background:#fff8ec;border-color:#ffe1b8;color:#8a570d}
+    .validation-box strong{font-weight:900}
     .toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px;padding:2px 2px 0}
     .toolbar-left,.toolbar-right{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.counter{font-weight:800;font-size:13px;color:var(--navy)}.counter span{color:var(--primary)}
     .search{border:1px solid var(--line);background:#fbfcfe;border-radius:11px;padding:10px 12px;min-width:270px;outline:none;font-size:13px;transition:.18s}.search:focus{border-color:#ffb397;box-shadow:0 0 0 3px rgba(255,90,31,.08);background:#fff}
@@ -148,7 +156,9 @@
           <div class="metric"><div class="metric-top"><small>TRANSAÇÕES ENCONTRADAS</small><span class="mini-icon">🧾</span></div><strong id="metricCount">0</strong></div>
           <div class="metric"><div class="metric-top"><small>VALOR TOTAL</small><span class="mini-icon">R$</span></div><strong id="metricTotal">R$ 0,00</strong></div>
           <div class="metric"><div class="metric-top"><small>PÁGINAS PROCESSADAS</small><span class="mini-icon">📑</span></div><strong id="metricPages">0</strong></div>
+          <div class="metric validation-warn" id="metricValidationCard"><div class="metric-top"><small>VALIDAÇÃO TOTAL COPASTUR</small><span class="mini-icon">✓</span></div><strong id="metricValidation">Aguardando</strong></div>
         </div>
+        <div class="validation-box warn" id="validationBox"><strong>Validação:</strong> processe uma fatura para comparar a soma dos lançamentos com o “Total para COPASTUR”.</div>
 
         <div class="toolbar">
           <div class="toolbar-left"><div class="counter">Prévia de lançamentos · <span id="rowCount">0</span> linhas</div></div>
@@ -167,7 +177,7 @@
 </div>
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const $=s=>document.querySelector(s); let selectedFile=null; let rows=[]; let pagesProcessed=0;
+  const $=s=>document.querySelector(s); let selectedFile=null; let rows=[]; let pagesProcessed=0; let invoiceTotal=null; let invoiceTotalRaw=''; let invoiceTotalSource='';
   const moneyBR=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
   const parseMoney=s=>{
     if(typeof s==='number') return s;
@@ -188,8 +198,8 @@
   function setFile(f){if(!f)return;if(f.type!=='application/pdf'&&!f.name.toLowerCase().endsWith('.pdf'))return alert('Selecione um arquivo PDF.');selectedFile=f;$('#fileInfo').style.display='block';$('#fileInfo').innerHTML=`<b>${f.name}</b><br>${(f.size/1024/1024).toFixed(2)} MB`;$('#processBtn').disabled=false}
 
   $('#processBtn').onclick=processPDF; $('#exportBtn').onclick=exportExcel; $('#addBtn').onclick=()=>{rows.push(blankRow());render()};
-  $('#clearBtn').onclick=()=>{rows=[];pagesProcessed=0;selectedFile=null;$('#pdfFile').value='';$('#fileInfo').style.display='none';$('#rawText').value='';$('#progressWrap').style.display='none';$('#processBtn').disabled=true;render()};
-  $('#search').addEventListener('input',render); $('#reparseBtn').onclick=()=>{rows=parseAllText($('#rawText').value);render()};
+  $('#clearBtn').onclick=()=>{rows=[];pagesProcessed=0;invoiceTotal=null;invoiceTotalRaw='';invoiceTotalSource='';selectedFile=null;$('#pdfFile').value='';$('#fileInfo').style.display='none';$('#rawText').value='';$('#progressWrap').style.display='none';$('#processBtn').disabled=true;render()};
+  $('#search').addEventListener('input',render); $('#reparseBtn').onclick=()=>{const raw=$('#rawText').value;const ti=extractInvoiceTotal(raw);invoiceTotal=ti.value;invoiceTotalRaw=ti.raw;invoiceTotalSource=ti.source;rows=parseAllText(raw);render()};
   function blankRow(){return{data:'',descricao:'',cidade:'',usd:'',cotacao:'',valor:0,tipo:'',portador:'',cartao:'',pagina:'',linhaOriginal:''}}
 
   // Reconstrói as linhas do PDF usando coordenadas. Isso evita o join(' ') que misturava colunas
@@ -236,7 +246,7 @@
   }
 
   async function processPDF(){
-    if(!selectedFile)return; rows=[]; pagesProcessed=0; $('#rawText').value=''; $('#progressWrap').style.display='block'; $('#processBtn').disabled=true; $('#exportBtn').disabled=true;
+    if(!selectedFile)return; rows=[]; pagesProcessed=0; invoiceTotal=null; invoiceTotalRaw=''; invoiceTotalSource=''; $('#rawText').value=''; $('#progressWrap').style.display='block'; $('#processBtn').disabled=true; $('#exportBtn').disabled=true;
     try{
       const data=await selectedFile.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data}).promise; let all='';
       for(let p=1;p<=pdf.numPages;p++){
@@ -259,10 +269,55 @@
         }
         all+=`\n\n===== PÁGINA ${p} =====\n${text}`; pagesProcessed=p;
       }
-      $('#rawText').value=all.trim(); rows=parseAllText(all); setProgress(100,`Concluído: ${rows.length} lançamentos encontrados.`); render();
+      $('#rawText').value=all.trim();
+      const totalInfo=extractInvoiceTotal(all); invoiceTotal=totalInfo.value; invoiceTotalRaw=totalInfo.raw; invoiceTotalSource=totalInfo.source;
+      rows=parseAllText(all);
+      const validation=getTotalValidation();
+      const msg=validation.status==='ok' ? `Concluído: ${rows.length} lançamentos. Total validado com sucesso.` : validation.status==='bad' ? `Concluído: ${rows.length} lançamentos, mas o total NÃO confere.` : `Concluído: ${rows.length} lançamentos. Total para COPASTUR não localizado.`;
+      setProgress(100,msg); render();
     }catch(err){console.error(err);setProgress(0,'Não foi possível processar o PDF. Tente novamente.');alert('Erro ao processar: '+err.message)}finally{$('#processBtn').disabled=false}
   }
   function setProgress(v,msg){$('#progressBar').style.width=Math.max(0,Math.min(100,v))+'%';$('#status').textContent=msg}
+
+
+  // Procura primeiro o total de controle específico da fatura. O valor é usado APENAS
+  // para validar a soma; ele nunca vira um lançamento.
+  function extractInvoiceTotal(text){
+    const rawLines=String(text||'').replace(/\r/g,'\n').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const candidates=[
+      {rx:/total\s+(?:para|p[ao]ra)\s+copastur/i,source:'Total para COPASTUR'},
+      {rx:/total\s+da\s+fatura\s+em\s+real/i,source:'Total da fatura em real'}
+    ];
+    const valueRx=/(?:R\$\s*)?([-−–—]?\s*\d{1,3}(?:\.\d{3})*,\d{2}\s*[-−–—]?|[-−–—]?\s*\d+,\d{2}\s*[-−–—]?)/g;
+    for(const c of candidates){
+      for(let i=0;i<rawLines.length;i++){
+        if(!c.rx.test(rawLines[i])) continue;
+        const window=[rawLines[i],rawLines[i+1]||'',rawLines[i+2]||''].join(' ');
+        const matches=[...window.matchAll(valueRx)];
+        if(matches.length){
+          const token=matches[matches.length-1][1].trim();
+          const n=parseMoney(token);
+          if(Number.isFinite(n) && n!==0) return {value:n,raw:token,source:c.source};
+        }
+      }
+    }
+    // Fallback tolerante a OCR: busca “TOTAL ... COPASTUR” no bloco inteiro.
+    const flat=rawLines.join('\n');
+    const fuzzy=flat.match(/total[^\n]{0,35}copastur[^\n]{0,60}?(\d{1,3}(?:\.\d{3})*,\d{2}\s*[-−–—]?)/i);
+    if(fuzzy){const token=fuzzy[1].trim(),n=parseMoney(token);if(n!==0)return{value:n,raw:token,source:'Total para COPASTUR (OCR)'}}
+    return {value:null,raw:'',source:''};
+  }
+
+  function getTotalValidation(){
+    const recognized=rows.reduce((s,r)=>s+(Number(r.valor)||0),0);
+    if(invoiceTotal===null || !Number.isFinite(invoiceTotal)) return {status:'warn',recognized,expected:null,diff:null};
+    // O Bradesco pode imprimir um traço após o total. Para a conferência contábil,
+    // comparamos também em módulo para não reprovar só pela convenção visual do total geral.
+    const signedDiff=recognized-invoiceTotal;
+    const absDiff=Math.abs(Math.abs(recognized)-Math.abs(invoiceTotal));
+    const ok=Math.abs(signedDiff)<=0.02 || absDiff<=0.02;
+    return {status:ok?'ok':'bad',recognized,expected:invoiceTotal,diff:absDiff,signedDiff};
+  }
 
   function parseAllText(text){
     const pageParts=String(text).split(/=====\s*P[ÁA]GINA\s+(\d+)\s*=====/i); let result=[];
@@ -388,6 +443,22 @@
     tb.querySelectorAll('input').forEach(inp=>inp.onchange=e=>{const i=+e.target.dataset.i,k=e.target.dataset.k;rows[i][k]=k==='valor'?parseMoney(e.target.value):e.target.value;if(k==='valor')rows[i].tipo=rows[i].valor<0?'Crédito':'Débito';render()});
     tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.del,1);render()});
     const has=rows.length>0;$('#empty').style.display=has?'none':'block';$('#tableWrap').style.display=has?'block':'none';$('#exportBtn').disabled=!has;$('#rowCount').textContent=shown.length;$('#metricCount').textContent=rows.length;$('#metricTotal').textContent=moneyBR(rows.reduce((s,r)=>s+(Number(r.valor)||0),0));$('#metricPages').textContent=pagesProcessed;
+    renderValidation();
+  }
+
+  function renderValidation(){
+    const v=getTotalValidation(), card=$('#metricValidationCard'), metric=$('#metricValidation'), box=$('#validationBox');
+    card.classList.remove('validation-ok','validation-bad','validation-warn'); box.classList.remove('ok','bad','warn');
+    if(v.status==='ok'){
+      card.classList.add('validation-ok'); box.classList.add('ok'); metric.textContent='CONFERE';
+      box.innerHTML=`<strong>✓ Total conferido.</strong> Soma dos lançamentos: <b>${moneyBR(v.recognized)}</b> · ${esc(invoiceTotalSource||'Total para COPASTUR')}: <b>${moneyBR(v.expected)}</b> · Diferença: <b>${moneyBR(v.diff)}</b>.`;
+    }else if(v.status==='bad'){
+      card.classList.add('validation-bad'); box.classList.add('bad'); metric.textContent='NÃO CONFERE';
+      box.innerHTML=`<strong>⚠ Total não confere.</strong> Soma dos lançamentos: <b>${moneyBR(v.recognized)}</b> · ${esc(invoiceTotalSource||'Total para COPASTUR')}: <b>${moneyBR(v.expected)}</b> · Diferença absoluta: <b>${moneyBR(v.diff)}</b>. Revise linhas faltantes, duplicadas ou valores lidos incorretamente antes de conciliar.`;
+    }else{
+      card.classList.add('validation-warn'); box.classList.add('warn'); metric.textContent='Não localizado';
+      box.innerHTML=`<strong>Validação pendente.</strong> O OCR não conseguiu localizar com segurança o texto “Total para COPASTUR”. A soma reconhecida até agora é <b>${moneyBR(v.recognized)}</b>.`;
+    }
   }
   function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
   function exportExcel(){
@@ -396,6 +467,20 @@
     for(let i=2;i<=data.length+1;i++){if(ws['F'+i])ws['F'+i].z='R$ #,##0.00;[Red]-R$ #,##0.00';}
     const totalRow=data.length+3;XLSX.utils.sheet_add_aoa(ws,[['','','','','TOTAL',rows.reduce((s,r)=>s+(Number(r.valor)||0),0)]],{origin:`A${totalRow}`});if(ws['F'+totalRow])ws['F'+totalRow].z='R$ #,##0.00;[Red]-R$ #,##0.00';
     ws['!autofilter']={ref:`A1:K${data.length+1}`}; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lançamentos');
+    const v=getTotalValidation();
+    const validationData=[
+      ['Validação do Total para COPASTUR',''],
+      ['Status',v.status==='ok'?'CONFERE':v.status==='bad'?'NÃO CONFERE':'TOTAL NÃO LOCALIZADO'],
+      ['Total reconhecido nos lançamentos',v.recognized],
+      ['Total para COPASTUR',v.expected??''],
+      ['Diferença absoluta',v.diff??''],
+      ['Fonte do total',invoiceTotalSource||''],
+      ['Texto do total reconhecido pelo OCR',invoiceTotalRaw||''],
+      ['Quantidade de lançamentos',rows.length],
+      ['Páginas processadas',pagesProcessed]
+    ];
+    const vws=XLSX.utils.aoa_to_sheet(validationData);vws['!cols']=[{wch:38},{wch:28}];['B3','B4','B5'].forEach(c=>{if(vws[c]&&typeof vws[c].v==='number')vws[c].z='R$ #,##0.00;[Red]-R$ #,##0.00'});
+    XLSX.utils.book_append_sheet(wb,vws,'Validação');
     const name=(selectedFile?.name||'fatura').replace(/\.pdf$/i,'').replace(/[^a-z0-9áàâãéêíóôõúç_-]+/gi,'_');XLSX.writeFile(wb,`Lancamentos_${name}.xlsx`);
   }
   render();
