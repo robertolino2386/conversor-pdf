@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -209,6 +208,33 @@
     return rowsByY.map(r=>r.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+$/,'')).join('\n');
   }
 
+  async function renderPageCanvas(page,scale=3.8){
+    const viewport=page.getViewport({scale});
+    const canvas=document.createElement('canvas'); canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
+    await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
+    return canvas;
+  }
+
+  function cropCanvas(source,{left=0,top=0,right=1,bottom=1}={}){
+    const x=Math.round(source.width*left), y=Math.round(source.height*top);
+    const w=Math.max(1,Math.round(source.width*(right-left))), h=Math.max(1,Math.round(source.height*(bottom-top)));
+    const out=document.createElement('canvas'); out.width=w; out.height=h;
+    out.getContext('2d',{willReadFrequently:true}).drawImage(source,x,y,w,h,0,0,w,h);
+    return out;
+  }
+
+  async function ocrCanvas(canvas,p,total,label='OCR'){
+    const result=await Tesseract.recognize(canvas,'por',{
+      logger:m=>{if(m.status==='recognizing text'){
+        const base=(p-1)/total*100; const part=(m.progress/total)*100;
+        setProgress(base+part,`${label} página ${p}: ${Math.round(m.progress*100)}%`)
+      }},
+      preserve_interword_spaces:'1',
+      tessedit_pageseg_mode:'6'
+    });
+    return result.data.text||'';
+  }
+
   async function processPDF(){
     if(!selectedFile)return; rows=[]; pagesProcessed=0; $('#rawText').value=''; $('#progressWrap').style.display='block'; $('#processBtn').disabled=true; $('#exportBtn').disabled=true;
     try{
@@ -217,11 +243,19 @@
         setProgress(((p-1)/pdf.numPages)*100,`Processando página ${p} de ${pdf.numPages}...`);
         const page=await pdf.getPage(p); let text='';
         const content=await page.getTextContent(); text=textContentToLines(content);
+
+        // Quando o PDF é só imagem (como esta fatura), usa OCR em alta resolução.
+        // Primeiro lê a faixa esquerda, onde ficam os lançamentos, reduzindo a interferência
+        // dos quadros e textos da direita.
         if(compact(text).length<80){
-          const viewport=page.getViewport({scale:2.6}); const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
-          await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
-          const result=await Tesseract.recognize(canvas,'por',{logger:m=>{if(m.status==='recognizing text'){const base=(p-1)/pdf.numPages*100;const part=(m.progress/pdf.numPages)*100;setProgress(base+part,`OCR página ${p}: ${Math.round(m.progress*100)}%`)}}});
-          text=result.data.text;
+          const canvas=await renderPageCanvas(page,3.8);
+          const tableCrop=cropCanvas(canvas,{left:0,top:p===1?0.08:0.035,right:0.62,bottom:0.88});
+          text=await ocrCanvas(tableCrop,p,pdf.numPages,'OCR da tabela');
+
+          // Se o recorte não encontrar datas suficientes, tenta a página inteira.
+          if((text.match(/\b\d{1,2}\s*\/\s*(?:\d{1,2}|[MNIl|])\b/gi)||[]).length<3){
+            text=await ocrCanvas(canvas,p,pdf.numPages,'OCR completo');
+          }
         }
         all+=`\n\n===== PÁGINA ${p} =====\n${text}`; pagesProcessed=p;
       }
@@ -232,57 +266,88 @@
 
   function parseAllText(text){
     const pageParts=String(text).split(/=====\s*P[ÁA]GINA\s+(\d+)\s*=====/i); let result=[];
-    if(pageParts.length>1){for(let i=1;i<pageParts.length;i+=2) result.push(...parsePage(pageParts[i+1]||'',pageParts[i]));}
-    else result=parsePage(text,'');
+    const state={tableStarted:false,portador:'',cartao:''};
+    if(pageParts.length>1){
+      for(let i=1;i<pageParts.length;i+=2){
+        const parsed=parsePage(pageParts[i+1]||'',pageParts[i],state);
+        result.push(...parsed.rows);
+      }
+    } else result=parsePage(text,'',state).rows;
     return dedupe(result).filter(r=>r.descricao && (r.data || r.valor!==0));
   }
 
   function isHeaderLine(s){
     const n=compact(s).toLowerCase();
-    return (n.includes('histórico')||n.includes('historico')) && n.includes('data') && (n.includes('r$')||n.includes('cotação')||n.includes('cotacao'));
+    return (n.includes('histórico')||n.includes('historico')||n.includes('lançamentos')||n.includes('lancamentos')) && n.includes('data');
   }
   function isSectionStart(s){return /\blan[çc]amentos\b/i.test(s)}
-  function isSectionEnd(s){return /\b(total\s+(?:de\s+)?lan[çc]amentos|pagamento\s+m[ií]nimo|encargos|limite\s+dispon[ií]vel|resumo\s+da\s+fatura)\b/i.test(s)}
+  function isSectionEnd(s){return /\b(total\s+(?:para|de\s+)?\s*copastur|total\s+da\s+fatura|mensagem\s+importante|pagamento\s+m[ií]nimo|encargos|limite\s+dispon[ií]vel|resumo\s+da\s+fatura)\b/i.test(s)}
   function isCardLine(s){return /cart[aã]o\s+\d{4}\s+x{3,}\s*\d{4}/i.test(s)}
 
-  function parsePage(text,pageNo){
-    // Não remove * nem outros caracteres do histórico. Só normaliza CR e espaços externos.
+  function normalizeDateToken(token){
+    const m=String(token||'').trim().match(/^(\d{1,2})\s*[\/.\-]\s*([0-9MNIl|]{0,2})$/i);
+    if(!m)return '';
+    let day=m[1].padStart(2,'0'), mon=(m[2]||'').toUpperCase().replace(/[IL|]/g,'1');
+    // Em scans, 11 costuma sair como N, M ou apenas 1. Corrigimos somente a DATA;
+    // o Histórico de Lançamentos continua exatamente como veio do OCR.
+    if(mon==='N'||mon==='M'||mon==='1'||mon==='') mon='11';
+    if(/^\d$/.test(mon)) mon=mon.padStart(2,'0');
+    const mm=Number(mon), dd=Number(day); if(dd<1||dd>31||mm<1||mm>12)return '';
+    return `${day}/${mon}`;
+  }
+
+  function parsePage(text,pageNo,state){
     const rawLines=String(text).replace(/\r/g,'\n').split(/\n+/).map(s=>s.trimEnd()).filter(s=>s.trim().length);
-    const out=[]; let portador='',cartao='',inTable=false,seenHeader=false;
+    const out=[];
 
     for(let idx=0;idx<rawLines.length;idx++){
       const original=rawLines[idx]; const line=original.trim();
-      if(isSectionStart(line)) inTable=true;
-      if(isHeaderLine(line)){inTable=true;seenHeader=true;continue}
-      if(!inTable && !seenHeader) continue; // começa somente na área de Lançamentos/cabeçalho cinza
-      if(isSectionEnd(line)) break;
+      if(isSectionStart(line)||isHeaderLine(line)) state.tableStarted=true;
+      if(isHeaderLine(line)) continue;
+
+      // Página 3 deste layout é continuação direta: não repete “Lançamentos” nem o cabeçalho.
+      if(!state.tableStarted){
+        if(/^\s*\d{1,2}\s*[\/.\-]\s*(?:\d{1,2}|[MNIl|])/i.test(line)) state.tableStarted=true;
+        else continue;
+      }
+      if(isSectionEnd(line)){state.tableStarted=false; continue}
 
       let cm=line.match(/cart[aã]o\s+(\d{4})\s+x{3,}\s*(\d{4})/i);
-      if(cm){cartao=cm[2]; continue}
-      let fm=line.match(/final\s*(\d{4})/i); if(fm)cartao=fm[1];
-      let pm=line.match(/^([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ .'-]{4,})\s+(?:cart[aã]o|final\b)/i); if(pm)portador=pm[1].trim();
+      if(cm){state.cartao=cm[2]; continue}
+      let fm=line.match(/final\s*(\d{4})/i); if(fm)state.cartao=fm[1];
+      let pm=line.match(/^([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ .'-]{4,})\s+(?:cart[aã]o|final\b)/i); if(pm)state.portador=pm[1].trim();
 
-      if(isHeaderLine(line)||isCardLine(line)||/^copastur\b/i.test(line)) continue;
-      const parsed=parseTransactionLine(line,pageNo,portador,cartao);
+      if(isCardLine(line)||/^copastur\b/i.test(line)) continue;
+      const parsed=parseTransactionLine(line,pageNo,state.portador,state.cartao);
       if(parsed) out.push(parsed);
     }
-    return out;
+    return {rows:out,state};
+  }
+
+  function normalizeOcrValue(raw){
+    let s=String(raw||'').trim().replace(/[−–—]/g,'-');
+    const neg=/-\s*$/.test(s)||/^\s*-/.test(s);
+    s=s.replace(/-/g,'').replace(/\s/g,'');
+    // Ajustes restritos ao token de VALOR. Não mexem no histórico.
+    s=s.replace(/([0-9])(?:n|m)$/i,'$1,11');
+    if(/^\d{1,3},\d$/.test(s)) s+='1';
+    if(/^\d{3}$/.test(s) && s.endsWith('1')) s=s.slice(0,-1)+',11';
+    return (neg?'-':'')+s;
   }
 
   function parseTransactionLine(line,pageNo,portador,cartao){
-    const m=line.match(/^\s*(\d{2}[\/.\-]\d{2})(?:[\/.\-]\d{2,4})?\s+(.+)$/);
+    const m=line.match(/^\s*([0-9]{1,2}\s*[\/.\-]\s*(?:[0-9]{1,2}|[MNIl|]))\s+(.+)$/i);
     if(!m) return null;
-    const data=m[1].replace(/[.\-]/g,'/');
+    const data=normalizeDateToken(m[1]); if(!data)return null;
     const rest=m[2];
 
-    // Captura o valor em R$ no fim da linha. Aceita sinal antes OU depois (ex.: -1.039,55 / 1.039,55- / 1.039,55 –).
-    const valueMatch=rest.match(/(?:R\$\s*)?([-−–—]?\s*\d{1,3}(?:\.\d{3})*,\d{2}|[-−–—]?\s*\d+,\d{2})\s*([-−–—])?\s*$/);
+    // Aceita valores normais e erros pequenos de OCR no fim da linha (34n, 34M, 34,1 etc.).
+    const valueMatch=rest.match(/(?:R\$\s*)?([-−–—]?\s*(?:\d{1,3}(?:\.\d{3})*,\d{1,2}|\d+,\d{1,2}|\d{2,4}[nNmM]?))\s*([-−–—])?\s*$/);
     if(!valueMatch) return null;
-    const valueToken=((valueMatch[1]||'')+(valueMatch[2]||'')).trim();
+    const valueToken=normalizeOcrValue(((valueMatch[1]||'')+(valueMatch[2]||'')).trim());
     const valor=parseMoney(valueToken);
     const beforeValue=rest.slice(0,valueMatch.index).trimEnd();
 
-    // Colunas opcionais imediatamente antes de R$: cotação e US$. Retiramos só quando têm formato numérico inequívoco.
     let descricaoCidade=beforeValue, usd='',cotacao='';
     let q=descricaoCidade.match(/\s+([-−–—]?\d+(?:[.,]\d+)?)\s*$/);
     if(q && /[.,]\d{2,}/.test(q[1])){cotacao=q[1];descricaoCidade=descricaoCidade.slice(0,q.index).trimEnd();}
@@ -290,11 +355,11 @@
     if(q && /[.,]\d{2}/.test(q[1])){usd=q[1];descricaoCidade=descricaoCidade.slice(0,q.index).trimEnd();}
 
     const split=splitDescriptionCity(descricaoCidade);
+    if(!split.descricao)return null;
     return {data,descricao:split.descricao,cidade:split.cidade,usd,cotacao,valor,tipo:valor<0?'Crédito':'Débito',portador,cartao,pagina:pageNo,linhaOriginal:line};
   }
 
   function splitDescriptionCity(s){
-    // Cidade costuma vir no final em caixa alta. Mantemos todo o texto anterior literalmente (inclusive *).
     const cityMatch=s.match(/^(.*?)(?:\s{2,}|\s)([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ .'-]{2,24})$/);
     if(cityMatch){
       const possible=cityMatch[2].trim();
